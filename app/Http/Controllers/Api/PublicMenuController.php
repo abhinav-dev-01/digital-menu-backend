@@ -98,6 +98,9 @@ class PublicMenuController extends Controller
                 if ($driver === 'sqlite') {
                     $q->orWhere('ingredients', 'like', "%{$s}%")
                       ->orWhere('allergens', 'like', "%{$s}%");
+                } elseif ($driver === 'pgsql') {
+                    $q->orWhereRaw("CAST(ingredients AS TEXT) LIKE ?", ["%{$s}%"])
+                      ->orWhereRaw("CAST(allergens AS TEXT) LIKE ?", ["%{$s}%"]);
                 } else {
                     $q->orWhereRaw("CAST(ingredients AS CHAR) LIKE ?", ["%{$s}%"])
                       ->orWhereRaw("CAST(allergens AS CHAR) LIKE ?", ["%{$s}%"]);
