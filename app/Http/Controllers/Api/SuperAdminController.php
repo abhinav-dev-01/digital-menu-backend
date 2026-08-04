@@ -104,17 +104,18 @@ class SuperAdminController extends Controller
 
         $adminRole = Role::where('name', 'admin')->first();
 
-        // Create Admin user with Pending Verification status
+        // [TEMP] Verification DISABLED — Admin accounts are activated immediately without OTP
+        $tempPassword = Str::random(12); // Temporary password (admin should change it)
         $user = User::create([
             'role_id' => $adminRole ? $adminRole->id : 2,
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make(Str::random(32)), // Temporary random hash until password is set by admin
+            'password' => Hash::make($tempPassword),
             'phone' => $request->phone,
-            'status' => 'pending',
-            'account_status' => 'Pending Verification',
-            'is_email_verified' => false,
-            'email_verified_at' => null,
+            'status' => 'active',
+            'account_status' => 'Active',
+            'is_email_verified' => true,
+            'email_verified_at' => \Carbon\Carbon::now(),
             'avatar' => 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=300&q=80',
         ]);
 
@@ -127,7 +128,7 @@ class SuperAdminController extends Controller
             'email' => $user->email,
             'contact_number' => $user->phone,
             'address' => $request->address,
-            'status' => 'pending',
+            'status' => 'active', // [TEMP] Verification DISABLED
             'account_status' => 'trial',
             'plan_name' => 'Free Trial',
             'plan_status' => 'trial',
@@ -147,55 +148,24 @@ class SuperAdminController extends Controller
         // Auto-seed full category hierarchy for this restaurant
         RestaurantCategorySeeder::seedForRestaurant($restaurant->id);
 
-        // Generate 6-digit OTP
-        $otpCode = (string) random_int(100000, 999999);
-
-        // Invalidate any previous OTPs for this email
-        AdminOtp::where('email', $user->email)->update(['status' => 'expired']);
-
-        // Save Hashed OTP in database (10 minute expiration)
-        AdminOtp::create([
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'otp_hash' => Hash::make($otpCode),
-            'expires_at' => \Carbon\Carbon::now()->addMinutes(10),
-            'status' => 'pending',
-            'attempts' => 0,
-        ]);
-
-        // Audit Logs
+        // [TEMP] OTP generation SKIPPED — verification is disabled
+        // Audit Log
         AuditLog::create([
             'user_id' => $request->user()->id,
             'role_name' => 'super_admin',
-            'action' => 'Admin Created: Created Restaurant Admin (' . $user->name . ')',
+            'action' => 'Admin Created (No Verification): Created Restaurant Admin (' . $user->name . ')',
             'entity_type' => 'User',
             'entity_id' => $user->id,
             'payload' => ['admin_email' => $user->email, 'restaurant' => $restaurant->name],
         ]);
 
-        AuditLog::create([
-            'user_id' => $request->user()->id,
-            'role_name' => 'super_admin',
-            'action' => 'OTP Generated: Generated 6-digit OTP for ' . $user->email,
-            'entity_type' => 'AdminOtp',
-            'entity_id' => $user->id,
-        ]);
-
-        AuditLog::create([
-            'user_id' => $request->user()->id,
-            'role_name' => 'super_admin',
-            'action' => 'OTP Sent: Sent verification OTP email to ' . $user->email,
-            'entity_type' => 'AdminOtp',
-            'entity_id' => $user->id,
-        ]);
-
-        Log::info("RESTAURANT ADMIN VERIFICATION OTP SENT to {$user->email} for restaurant '{$restaurant->name}' - OTP Code: {$otpCode}");
+        Log::info("[TEMP - VERIFICATION DISABLED] RESTAURANT ADMIN CREATED: {$user->email} for restaurant '{$restaurant->name}' - Temp Password: {$tempPassword}");
 
         return response()->json([
             'status' => true,
-            'message' => "Restaurant Admin created successfully. A 6-digit verification OTP has been sent to {$user->email}.",
+            'message' => "Restaurant Admin created successfully. Account is immediately active (verification temporarily disabled).",
             'data' => $user->load('restaurant'),
-            'otp_demo' => $otpCode,
+            'temp_password' => $tempPassword, // [TEMP] Remove this in production
         ], 201);
     }
 

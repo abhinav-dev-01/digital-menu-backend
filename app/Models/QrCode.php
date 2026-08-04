@@ -23,6 +23,22 @@ class QrCode extends Model
         'total_scans' => 'integer',
     ];
 
+    public function getTargetUrlAttribute($value)
+    {
+        $configuredFrontendUrl = rtrim(config('app.frontend_url', 'http://localhost:5173'), '/');
+
+        if (!empty($value)) {
+            // Replace any stored scheme://domain with the configured frontend_url
+            return preg_replace('#^https?://[^/]+#', $configuredFrontendUrl, $value);
+        }
+
+        if ($this->restaurant) {
+            return "{$configuredFrontendUrl}/menu/" . $this->restaurant->slug;
+        }
+
+        return $value;
+    }
+
     public function restaurant()
     {
         return $this->belongsTo(Restaurant::class);

@@ -29,7 +29,8 @@ class QrCodeController extends Controller
         $restaurant = $user->restaurant;
 
         $codeHash = 'QR-' . strtoupper(Str::random(8));
-        $targetUrl = "http://localhost:5173/menu/" . $restaurant->slug;
+        $baseUrl = rtrim(config('app.frontend_url', 'http://localhost:5173'), '/');
+        $targetUrl = "{$baseUrl}/menu/" . $restaurant->slug;
 
         $qrCode = QrCode::create([
             'restaurant_id' => $restaurant->id,
@@ -61,10 +62,11 @@ class QrCodeController extends Controller
 
         $qrCode = QrCode::where('restaurant_id', $restaurant->id)->findOrFail($id);
         $newHash = 'QR-' . strtoupper(Str::random(8));
+        $baseUrl = rtrim(config('app.frontend_url', 'http://localhost:5173'), '/');
 
         $qrCode->update([
             'code_hash' => $newHash,
-            'target_url' => "http://localhost:5173/menu/" . $restaurant->slug,
+            'target_url' => "{$baseUrl}/menu/" . $restaurant->slug,
         ]);
 
         AuditLog::create([
