@@ -9,6 +9,7 @@ use App\Models\MenuItem;
 use App\Models\QrCode;
 use App\Models\Review;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PublicMenuController extends Controller
 {
@@ -87,7 +88,7 @@ class PublicMenuController extends Controller
         // Search Filter (Search item name, description, category name, ingredients & allergens)
         if ($request->has('search') && $request->search !== null && trim($request->search) !== '') {
             $s = trim($request->search);
-            $driver = \DB::connection()->getDriverName();
+            $driver = DB::connection()->getDriverName();
             $query->where(function($q) use ($s, $driver) {
                 $q->where('name', 'like', "%{$s}%")
                   ->orWhere('description', 'like', "%{$s}%")

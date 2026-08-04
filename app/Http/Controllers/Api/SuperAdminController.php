@@ -139,7 +139,7 @@ class SuperAdminController extends Controller
         QrCode::create([
             'restaurant_id' => $restaurant->id,
             'code_hash' => 'QR-' . strtoupper(Str::random(8)),
-            'target_url' => 'http://localhost:5173/menu/' . $restaurant->slug,
+            'target_url' => rtrim(config('app.frontend_url', 'http://localhost:5173'), '/') . '/menu/' . $restaurant->slug,
             'total_scans' => 0,
             'is_active' => true,
         ]);
@@ -314,7 +314,7 @@ class SuperAdminController extends Controller
         $report->update([
             'super_admin_reply' => $request->super_admin_reply,
             'status' => $request->status,
-            'assignee_id' => $request->user()->id,
+            'assigned_to' => $request->user()->id,
         ]);
 
         AuditLog::create([

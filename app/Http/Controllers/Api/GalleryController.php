@@ -14,6 +14,10 @@ class GalleryController extends Controller
         $user = $request->user();
         $restaurant = $user->restaurant;
 
+        if (!$restaurant) {
+            return response()->json(['status' => false, 'message' => 'No restaurant associated with this account.'], 404);
+        }
+
         $images = GalleryImage::where('restaurant_id', $restaurant->id)->get();
 
         return response()->json([
@@ -26,6 +30,10 @@ class GalleryController extends Controller
     {
         $user = $request->user();
         $restaurant = $user->restaurant;
+
+        if (!$restaurant) {
+            return response()->json(['status' => false, 'message' => 'No restaurant associated with this account.'], 404);
+        }
 
         $validator = Validator::make($request->all(), [
             'image_url' => 'required|string',
@@ -57,6 +65,11 @@ class GalleryController extends Controller
     {
         $user = $request->user();
         $restaurant = $user->restaurant;
+
+        if (!$restaurant) {
+            return response()->json(['status' => false, 'message' => 'No restaurant associated with this account.'], 404);
+        }
+
         $image = GalleryImage::where('restaurant_id', $restaurant->id)->findOrFail($id);
 
         $image->delete();

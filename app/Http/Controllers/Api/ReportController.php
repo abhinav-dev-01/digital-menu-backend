@@ -15,6 +15,10 @@ class ReportController extends Controller
         $user = $request->user();
         $restaurant = $user->restaurant;
 
+        if (!$restaurant) {
+            return response()->json(['status' => false, 'message' => 'No restaurant associated with this account.'], 404);
+        }
+
         $qrScans = QrCode::where('restaurant_id', $restaurant->id)->get();
         $popularItems = MenuItem::where('restaurant_id', $restaurant->id)
             ->where('is_bestseller', true)

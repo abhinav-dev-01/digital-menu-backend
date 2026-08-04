@@ -26,6 +26,10 @@ class RestaurantProfileController extends Controller
         $user = $request->user();
         $restaurant = $user->restaurant;
 
+        if (!$restaurant) {
+            return response()->json(['status' => false, 'message' => 'No restaurant associated with this account.'], 404);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'logo' => 'nullable|string',

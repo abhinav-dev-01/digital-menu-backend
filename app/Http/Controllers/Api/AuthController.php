@@ -146,7 +146,7 @@ class AuthController extends Controller
             \App\Models\QrCode::create([
                 'restaurant_id' => $restaurant->id,
                 'code_hash' => 'QR-' . strtoupper(Str::random(8)),
-                'target_url' => 'http://localhost:5173/menu/' . $restaurant->slug,
+                'target_url' => rtrim(config('app.frontend_url', 'http://localhost:5173'), '/') . '/menu/' . $restaurant->slug,
                 'total_scans' => 0,
                 'is_active' => true,
             ]);
