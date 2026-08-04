@@ -24,7 +24,7 @@ return [
     | in your Railway environment variables.
     */
 
-    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+    'frontend_url' => env('FRONTEND_URL', 'https://digital-menu-frontend-eight.vercel.app'),
 
     /*
     |--------------------------------------------------------------------------
