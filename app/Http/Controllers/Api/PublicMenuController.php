@@ -32,29 +32,29 @@ class PublicMenuController extends Controller
             $qr = QrCode::where('code_hash', $target)->first();
             if ($qr) {
                 $qr->increment('total_scans');
-                $restaurant = Restaurant::where('id', $qr->restaurant_id)->where('status', 'active')->first();
+                $restaurant = Restaurant::where('id', $qr->restaurant_id)->first();
             }
 
             // 2. Resolve by Slug
             if (!$restaurant) {
-                $restaurant = Restaurant::where('slug', $target)->where('status', 'active')->first();
+                $restaurant = Restaurant::where('slug', $target)->first();
             }
 
             // 3. Resolve by ID if numeric
             if (!$restaurant && is_numeric($target)) {
-                $restaurant = Restaurant::where('id', (int)$target)->where('status', 'active')->first();
+                $restaurant = Restaurant::where('id', (int)$target)->first();
             }
         }
 
-        // 4. Fallback: default to the first active restaurant so /menu works seamlessly
+        // 4. Fallback: default to the first active or first available restaurant so /menu works seamlessly
         if (!$restaurant) {
-            $restaurant = Restaurant::where('status', 'active')->first();
+            $restaurant = Restaurant::where('status', 'active')->first() ?? Restaurant::first();
         }
 
         if (!$restaurant) {
             return response()->json([
                 'status' => false,
-                'message' => 'No active restaurant found.'
+                'message' => 'No restaurant available.'
             ], 404);
         }
 
