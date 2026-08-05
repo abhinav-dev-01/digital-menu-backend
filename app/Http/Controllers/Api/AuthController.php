@@ -47,9 +47,15 @@ class AuthController extends Controller
         }
 
         if ($user->status !== 'active') {
+            $msg = 'Account is ' . $user->status . '. Please contact system administrator.';
+            if ($user->status === 'pending') {
+                $msg = 'Your restaurant registration is pending approval by Super Admin. You can log in once approved.';
+            } else if ($user->status === 'rejected') {
+                $msg = 'Your restaurant registration request has been rejected by Super Admin. Login access denied.';
+            }
             return response()->json([
                 'status' => false,
-                'message' => 'Account is ' . $user->status . '. Please contact system administrator.',
+                'message' => $msg,
             ], 403);
         }
 
@@ -112,13 +118,15 @@ class AuthController extends Controller
 
         $role = Role::where('name', $roleName)->first();
 
+        $initialStatus = ($roleName === 'admin') ? 'pending' : 'active';
+
         $user = User::create([
             'role_id' => $role ? $role->id : 3,
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'phone' => $request->phone,
-            'status' => 'active',
+            'status' => $initialStatus,
             'avatar' => 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
         ]);
 
@@ -132,7 +140,7 @@ class AuthController extends Controller
                 'owner_name' => $user->name,
                 'email' => $user->email,
                 'contact_number' => $user->phone,
-                'status' => 'active',
+                'status' => 'pending',
                 'account_status' => 'trial',
                 'plan_name' => 'Free Trial',
                 'plan_status' => 'trial',
@@ -153,6 +161,23 @@ class AuthController extends Controller
 
             // Auto-seed full category hierarchy
             RestaurantCategorySeeder::seedForRestaurant($restaurant->id);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Restaurant registration submitted successfully! Your account is pending Super Admin approval.',
+                'data' => [
+                    'pending_approval' => true,
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                        'status' => 'pending',
+                        'role' => 'admin',
+                        'restaurant' => $restaurant,
+                    ]
+                ]
+            ], 201);
         }
 
         $user->load(['role', 'restaurant']);

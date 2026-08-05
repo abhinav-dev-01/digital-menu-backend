@@ -92,10 +92,12 @@ class SuperAdminController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'password' => 'nullable|string|min:6',
             'phone' => 'nullable|string',
             'restaurant_name' => 'required|string|max:255',
             'address' => 'nullable|string',
             'logo' => 'nullable|string',
+            'status' => 'nullable|string|in:active,pending,rejected',
         ]);
 
         if ($validator->fails()) {
@@ -103,19 +105,16 @@ class SuperAdminController extends Controller
         }
 
         $adminRole = Role::where('name', 'admin')->first();
+        $adminStatus = $request->input('status', 'active');
+        $plainPassword = $request->password ?: Str::random(10);
 
-        // [TEMP] Verification DISABLED — Admin accounts are activated immediately without OTP
-        $tempPassword = Str::random(12); // Temporary password (admin should change it)
         $user = User::create([
             'role_id' => $adminRole ? $adminRole->id : 2,
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($tempPassword),
+            'password' => Hash::make($plainPassword),
             'phone' => $request->phone,
-            'status' => 'active',
-            'account_status' => 'Active',
-            'is_email_verified' => true,
-            'email_verified_at' => \Carbon\Carbon::now(),
+            'status' => $adminStatus,
             'avatar' => 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=300&q=80',
         ]);
 
@@ -128,7 +127,7 @@ class SuperAdminController extends Controller
             'email' => $user->email,
             'contact_number' => $user->phone,
             'address' => $request->address,
-            'status' => 'active', // [TEMP] Verification DISABLED
+            'status' => $adminStatus,
             'account_status' => 'trial',
             'plan_name' => 'Free Trial',
             'plan_status' => 'trial',
@@ -148,24 +147,20 @@ class SuperAdminController extends Controller
         // Auto-seed full category hierarchy for this restaurant
         RestaurantCategorySeeder::seedForRestaurant($restaurant->id);
 
-        // [TEMP] OTP generation SKIPPED — verification is disabled
-        // Audit Log
         AuditLog::create([
             'user_id' => $request->user()->id,
             'role_name' => 'super_admin',
-            'action' => 'Admin Created (No Verification): Created Restaurant Admin (' . $user->name . ')',
+            'action' => 'Super Admin Created Restaurant Admin (' . $user->name . ') with status: ' . $adminStatus,
             'entity_type' => 'User',
             'entity_id' => $user->id,
             'payload' => ['admin_email' => $user->email, 'restaurant' => $restaurant->name],
         ]);
 
-        Log::info("[TEMP - VERIFICATION DISABLED] RESTAURANT ADMIN CREATED: {$user->email} for restaurant '{$restaurant->name}' - Temp Password: {$tempPassword}");
-
         return response()->json([
             'status' => true,
-            'message' => "Restaurant Admin created successfully. Account is immediately active (verification temporarily disabled).",
+            'message' => "Restaurant Admin created successfully.",
             'data' => $user->load('restaurant'),
-            'temp_password' => $tempPassword, // [TEMP] Remove this in production
+            'plain_password' => $plainPassword,
         ], 201);
     }
 
@@ -174,7 +169,7 @@ class SuperAdminController extends Controller
         $admin = User::whereHas('role', fn($q) => $q->where('name', 'admin'))->findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:active,inactive,suspended',
+            'status' => 'required|in:active,inactive,suspended,pending,rejected',
         ]);
 
         if ($validator->fails()) {
@@ -190,14 +185,20 @@ class SuperAdminController extends Controller
         AuditLog::create([
             'user_id' => $request->user()->id,
             'role_name' => 'super_admin',
-            'action' => 'Updated Admin Status to ' . $request->status,
+            'action' => 'Updated Admin Status to ' . $request->status . ' for (' . $admin->name . ')',
             'entity_type' => 'User',
             'entity_id' => $admin->id,
         ]);
 
+        $statusMsg = $request->status === 'active' 
+            ? 'Restaurant Admin accepted. Login access approved.' 
+            : ($request->status === 'rejected' 
+                ? 'Restaurant Admin rejected. Login access denied.' 
+                : 'Admin status updated to ' . $request->status);
+
         return response()->json([
             'status' => true,
-            'message' => 'Admin status updated to ' . $request->status,
+            'message' => $statusMsg,
             'data' => $admin->fresh('restaurant'),
         ]);
     }
